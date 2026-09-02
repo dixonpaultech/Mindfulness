@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Journal</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent: #4f46e5;
+            --accent-hover: #6366f1;
+            --border: #2e2e2e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--panel-bg);
+            text-align: center;
+        }
+
+        #current-date {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .left-section {
+            border-right: 1px solid var(--border);
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        label {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        textarea {
+            width: 100%;
+            flex: 1;
+            min-height: 120px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            align-self: flex-end;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .entry-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .entry-date {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .entry-block {
+            margin-bottom: 0.75rem;
+        }
+
+        .entry-block:last-child {
+            margin-bottom: 0;
+        }
+
+        .entry-block h4 {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .entry-block p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+            }
+            .left-section {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                flex: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div id="current-date"></div>
+    </header>
+
+    <main>
+        <!-- Left Section: Create Entry -->
+        <div class="section left-section">
+            <h2>New Journal Entry</h2>
+            <div class="form-group">
+                <label for="did-today">What I Did Today</label>
+                <textarea id="did-today" placeholder="Log your activities, milestones, or tasks..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="thought-today">What I Thought About Today</label>
+                <textarea id="thought-today" placeholder="Log your reflections, moods, ideas, or reminders..."></textarea>
+            </div>
+            <button id="save-btn">Save Entry</button>
+        </div>
+
+        <!-- Right Section: Past Entries -->
+        <div class="section">
+            <h2>Previous Entries</h2>
+            <div id="history-list"></div>
+        </div>
+    </main>
+
+    <script>
+        // Set display date
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', dateOptions);
+
+        // DOM Elements
+        const didTextArea = document.getElementById('did-today');
+        const thoughtTextArea = document.getElementById('thought-today');
+        const saveButton = document.getElementById('save-btn');
+        const historyList = document.getElementById('history-list');
+
+        // Load and display entries
+        function displayEntries() {
+            historyList.innerHTML = '';
+            const entries = JSON.parse(localStorage.getItem('journal_entries')) || [];
+            
+            // Render from most recent to oldest
+            entries.forEach(entry => {
+                const card = document.createElement('div');
+                card.className = 'entry-card';
+                
+                card.innerHTML = `
+                    <div class="entry-date">${entry.date}</div>
+                    <div class="entry-block">
+                        <h4>Things I Did</h4>
+                        <p>${entry.did || 'Nothing logged.'}</p>
+                    </div>
+                    <div class="entry-block">
+                        <h4>Things I Thought About</h4>
+                        <p>${entry.thought || 'Nothing logged.'}</p>
+                    </div>
+                `;
+                historyList.appendChild(card);
+            });
+        }
+
+        // Save entry handler
+        saveButton.addEventListener('click', () => {
+            const didText = didTextArea.value.trim();
+            const thoughtText = thoughtTextArea.value.trim();
+
+            if (!didText && !thoughtText) {
+                alert('Please fill out at least one section before saving.');
+                return;
+            }
+
+            const entries = JSON.parse(localStorage.getItem('journal_entries')) || [];
+            
+            const newEntry = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString('en-US', dateOptions),
+                did: didText,
+                thought: thoughtText
+            };
+
+            // Unshift adds to the beginning so it's ordered top-to-bottom by newest
+            entries.unshift(newEntry);
+            localStorage.setItem('journal_entries', JSON.stringify(entries));
+
+            // Clear inputs and refresh view
+            didTextArea.value = '';
+            thoughtTextArea.value = '';
+            displayEntries();
+        });
+
+        // Initialize view on load
+        displayEntries();
+    </script>
+</body>
+</html>
