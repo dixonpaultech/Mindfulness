@@ -196,17 +196,35 @@
             <div id="history-list"></div>
         </div>
     </main>
-
+    
     <script>
         // Set display date
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', dateOptions);
+        const todayString = new Date().toLocaleDateString('en-US', dateOptions);
+        document.getElementById('current-date').innerText = todayString;
 
         // DOM Elements
         const didTextArea = document.getElementById('did-today');
         const thoughtTextArea = document.getElementById('thought-today');
         const saveButton = document.getElementById('save-btn');
         const historyList = document.getElementById('history-list');
+
+        // Check if there is already an entry for today to let you keep editing it
+        function checkAndLoadToday() {
+            const entries = JSON.parse(localStorage.getItem('journal_entries')) || [];
+            // Find an entry matching today's exact date string
+            const todayEntry = entries.find(entry => entry.date === todayString);
+            
+            if (todayEntry) {
+                didTextArea.value = todayEntry.did || '';
+                thoughtTextArea.value = todayEntry.thought || '';
+                saveButton.innerText = 'Update Today\'s Entry';
+            } else {
+                didTextArea.value = '';
+                thoughtTextArea.value = '';
+                saveButton.innerText = 'Save Entry';
+            }
+        }
 
         // Load and display entries
         function displayEntries() {
@@ -233,7 +251,7 @@
             });
         }
 
-        // Save entry handler
+        // Save / Update entry handler
         saveButton.addEventListener('click', () => {
             const didText = didTextArea.value.trim();
             const thoughtText = thoughtTextArea.value.trim();
@@ -243,26 +261,40 @@
                 return;
             }
 
-            const entries = JSON.parse(localStorage.getItem('journal_entries')) || [];
+            let entries = JSON.parse(localStorage.getItem('journal_entries')) || [];
             
-            const newEntry = {
-                id: Date.now(),
-                date: new Date().toLocaleDateString('en-US', dateOptions),
-                did: didText,
-                thought: thoughtText
-            };
+            // Look for an entry matching today
+            const existingIndex = entries.findIndex(entry => entry.date === todayString);
 
-            // Unshift adds to the beginning so it's ordered top-to-bottom by newest
-            entries.unshift(newEntry);
+            if (existingIndex !== -1) {
+                // UPDATE: Modify the existing entry for today
+                entries[existingIndex].did = didText;
+                entries[existingIndex].thought = thoughtText;
+            } else {
+                // CREATE: If it's a brand new day, add it to the top of the list
+                const newEntry = {
+                    id: Date.now(),
+                    date: todayString,
+                    did: didText,
+                    thought: thoughtText
+                };
+                entries.unshift(newEntry);
+            }
+
+            // Save back to local storage
             localStorage.setItem('journal_entries', JSON.stringify(entries));
 
-            // Clear inputs and refresh view
-            didTextArea.value = '';
-            thoughtTextArea.value = '';
+            // Visual feedback & update UI
+            saveButton.innerText = "Updated!";
+            setTimeout(() => {
+                saveButton.innerText = "Update Today's Entry";
+            }, 1500);
+
             displayEntries();
         });
 
         // Initialize view on load
+        checkAndLoadToday();
         displayEntries();
     </script>
 </body>
